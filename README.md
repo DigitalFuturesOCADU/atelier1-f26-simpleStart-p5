@@ -42,7 +42,9 @@ Turn on GitHub Pages for this repo so it publishes from the main branch. Use the
 
 In the **Actions** tab you may see a run marked cancelled just before the green one. That is normal. The next push replaced it.
 
-**Made your copy before September 29, 2026?** It has a file, `.github/workflows/static.yml`, from the old setup. That file only works with **Source** set to **GitHub Actions**. Either keep it with that setting, or delete it and use **Deploy from a branch** as above. The prompt does the second for you.
+**Made your copy before September 29, 2026?** Switch Pages on the same way, from the main branch. Your copy has a file from the old setup, `.github/workflows/static.yml`. It does no harm: it publishes the same files a second time after each push. To tidy up, delete it, or let the prompt do it.
+
+**Never click Configure** on the Pages settings page. If you choose **GitHub Actions** as the source, GitHub offers a workflow with a **Configure** button. In a copy made before September 29 it tries to add a file your repo already has, and GitHub says the file already exists. You do not need it.
 
 The same fix is in the setup guide, with a Copy button for the prompt: [Pages is not switched on](https://digitalfuturesocadu.github.io/vsCodeSetup/guide/#fix--pages-off).
 
