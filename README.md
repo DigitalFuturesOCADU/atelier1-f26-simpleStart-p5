@@ -27,6 +27,21 @@ The short version:
 https://YOUR-USERNAME.github.io/YOUR-REPO-NAME/
 ```
 
+If the page does not appear, see the next part.
+
+## If your page does not publish
+
+A new copy of this template does not switch Pages on by itself. Until step 2 is done, each run in the **Actions** tab fails at **Setup Pages**, and your address shows a 404.
+
+- **By hand:** open **Settings**, then **Pages**, and set **Source** to **GitHub Actions**. Then open the **Actions** tab, open the failed run, and click **Re-run all jobs**.
+- **Or ask your coding agent.** In OpenCode, or in VS Code's Chat set to **Agent**, open this project and paste the prompt below. It needs the GitHub CLI signed in first: run `gh auth login`.
+
+```
+Turn on GitHub Pages for this repo so it publishes with GitHub Actions. Use the GitHub CLI. Run gh api -X POST "repos/{owner}/{repo}/pages" -f build_type=workflow. If it says Pages already exists, run the same command with -X PUT instead. Then start the Pages workflow again with gh workflow run static.yml. Wait a few seconds, get the new run's ID with gh run list --workflow static.yml --limit 1, and follow it with gh run watch and that ID. When it finishes, tell me the Pages address from gh api "repos/{owner}/{repo}/pages" --jq .html_url. Do not change any files.
+```
+
+The same fix, with screenshots, is in the setup guide: [Pages is not switched on](https://digitalfuturesocadu.github.io/vsCodeSetup/guide/#fix--pages-off).
+
 ## What is in the sketch
 
 Nothing yet. `sketch.js` is the same blank sketch you get in the p5 web editor: a `setup()` that makes a 400 by 400 canvas and a `draw()` that fills it with grey. Start from there.
