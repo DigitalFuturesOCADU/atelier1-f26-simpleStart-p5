@@ -7,7 +7,7 @@ It is the same setup you have used in the p5 web editor:
 - `index.html` links p5.js 2.x and p5-phone.
 - `sketch.js` is your sketch.
 
-It also includes two extras. `.github/workflows/static.yml` tells GitHub to publish your sketch as a web page every time you push. `.agents/skills` teaches coding agents about p5.js 2.x and p5-phone (see the end of this page).
+It also includes two extras. `.agents/skills` teaches coding agents about p5.js 2.x and p5-phone (see the end of this page). `.nojekyll` is an empty file that tells GitHub Pages to publish your files exactly as they are.
 
 ## Use it
 
@@ -17,7 +17,7 @@ https://digitalfuturesocadu.github.io/vsCodeSetup/guide/
 The short version:
 
 1. Click **Use this template**, then **Create a new repository**. Keep it **Public**.
-2. In your new repository, open **Settings**, then **Pages**. Set **Source** to **GitHub Actions**.
+2. In your new repository, open **Settings**, then **Pages**. Under **Build and deployment**, leave **Source** on **Deploy from a branch**. Set **Branch** to **main** and the folder to **/ (root)**, then click **Save**. After that, every push publishes your sketch.
 3. In VS Code, choose **Clone Git Repository**, then **Clone from GitHub**, and pick your new repository.
 4. Open `index.html` and click **Go Live** to see the sketch on your laptop.
 5. Change `sketch.js`. In Source Control, write a message, click **Commit**, then **Sync Changes**.
@@ -31,14 +31,16 @@ If the page does not appear, see the next part.
 
 ## If your page does not publish
 
-A new copy of this template does not switch Pages on by itself. Until step 2 is done, each run in the **Actions** tab fails at **Setup Pages**, and your address shows a 404.
+GitHub does not copy the Pages setting from the template, so each new copy needs step 2 once. Until then, your address shows a 404.
 
-- **By hand:** open **Settings**, then **Pages**, and set **Source** to **GitHub Actions**. Then open the **Actions** tab, open the failed run, and click **Re-run all jobs**.
+- **By hand:** open **Settings**, then **Pages**. **Source:** Deploy from a branch. **Branch:** main, **/ (root)**. Click **Save**. In about a minute the page says **Your site is live at** with your address.
 - **Or ask your coding agent.** In OpenCode, or in VS Code's Chat set to **Agent**, open this project and paste the prompt below. It needs the GitHub CLI signed in first: run `gh auth login`.
 
 ```
-Turn on GitHub Pages for this repo so it publishes with GitHub Actions. Use the GitHub CLI. Run gh api -X POST "repos/{owner}/{repo}/pages" -f build_type=workflow. If it says Pages already exists, run the same command with -X PUT instead. Then start the Pages workflow again with gh workflow run static.yml. Wait a few seconds, get the new run's ID with gh run list --workflow static.yml --limit 1, and follow it with gh run watch and that ID. When it finishes, tell me the Pages address from gh api "repos/{owner}/{repo}/pages" --jq .html_url. Do not change any files.
+Turn on GitHub Pages for this repo so it publishes from the main branch. Use the GitHub CLI. Run gh api -X POST "repos/{owner}/{repo}/pages" -f "source[branch]=main" -f "source[path]=/". If it says Pages already exists, run gh api -X PUT "repos/{owner}/{repo}/pages" -f build_type=legacy -f "source[branch]=main" -f "source[path]=/" instead. If the file .github/workflows/static.yml exists, delete it, then commit and push that change. Then find the newest run with gh run list --limit 1, follow it with gh run watch and its ID, and when it finishes tell me the Pages address from gh api "repos/{owner}/{repo}/pages" --jq .html_url.
 ```
+
+**Made your copy before September 29, 2026?** It has a file, `.github/workflows/static.yml`, from the old setup. That file only works with **Source** set to **GitHub Actions**. Either keep it with that setting, or delete it and use **Deploy from a branch** as above. The prompt does the second for you.
 
 The same fix is in the setup guide, with a Copy button for the prompt: [Pages is not switched on](https://digitalfuturesocadu.github.io/vsCodeSetup/guide/#fix--pages-off).
 
