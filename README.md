@@ -40,7 +40,7 @@ A new copy of this template does not switch Pages on by itself. Until step 2 is 
 Turn on GitHub Pages for this repo so it publishes with GitHub Actions. Use the GitHub CLI. Run gh api -X POST "repos/{owner}/{repo}/pages" -f build_type=workflow. If it says Pages already exists, run the same command with -X PUT instead. Then start the Pages workflow again with gh workflow run static.yml. Wait a few seconds, get the new run's ID with gh run list --workflow static.yml --limit 1, and follow it with gh run watch and that ID. When it finishes, tell me the Pages address from gh api "repos/{owner}/{repo}/pages" --jq .html_url. Do not change any files.
 ```
 
-The same fix, with screenshots, is in the setup guide: [Pages is not switched on](https://digitalfuturesocadu.github.io/vsCodeSetup/guide/#fix--pages-off).
+The same fix is in the setup guide, with a Copy button for the prompt: [Pages is not switched on](https://digitalfuturesocadu.github.io/vsCodeSetup/guide/#fix--pages-off).
 
 ## What is in the sketch
 
