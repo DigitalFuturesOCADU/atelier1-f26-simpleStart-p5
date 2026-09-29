@@ -37,8 +37,10 @@ GitHub does not copy the Pages setting from the template, so each new copy needs
 - **Or ask your coding agent.** In OpenCode, or in VS Code's Chat set to **Agent**, open this project and paste the prompt below. It needs the GitHub CLI signed in first: run `gh auth login`.
 
 ```
-Turn on GitHub Pages for this repo so it publishes from the main branch. Use the GitHub CLI. Run gh api -X POST "repos/{owner}/{repo}/pages" -f "source[branch]=main" -f "source[path]=/". If it says Pages already exists, run gh api -X PUT "repos/{owner}/{repo}/pages" -f build_type=legacy -f "source[branch]=main" -f "source[path]=/" instead. If the file .github/workflows/static.yml exists, delete it, then commit and push that change. Then find the newest run with gh run list --limit 1, follow it with gh run watch and its ID, and when it finishes tell me the Pages address from gh api "repos/{owner}/{repo}/pages" --jq .html_url.
+Turn on GitHub Pages for this repo so it publishes from the main branch. Use the GitHub CLI. Run gh api -X POST "repos/{owner}/{repo}/pages" -f "source[branch]=main" -f "source[path]=/". If it says Pages is already enabled, run gh api -X PUT "repos/{owner}/{repo}/pages" -f build_type=legacy -f "source[branch]=main" -f "source[path]=/" instead. If the file .github/workflows/static.yml exists, delete it, then commit and push that change. Then find the newest run with gh run list --limit 1, follow it with gh run watch and its ID, and when it finishes tell me the Pages address from gh api "repos/{owner}/{repo}/pages" --jq .html_url.
 ```
+
+In the **Actions** tab you may see a run marked cancelled just before the green one. That is normal. The next push replaced it.
 
 **Made your copy before September 29, 2026?** It has a file, `.github/workflows/static.yml`, from the old setup. That file only works with **Source** set to **GitHub Actions**. Either keep it with that setting, or delete it and use **Deploy from a branch** as above. The prompt does the second for you.
 
