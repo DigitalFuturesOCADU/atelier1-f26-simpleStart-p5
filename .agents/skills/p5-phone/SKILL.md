@@ -6,7 +6,7 @@ argument-hint: "Describe the p5-phone example or API question"
 
 # p5-phone: Mobile Hardware for p5.js
 
-p5-phone is a single-file helper library that gives p5.js sketches access to mobile phone hardware — motion sensors, microphone, sound, speech, camera (with ML5 coordinate mapping), vibration, torch/flashlight, NFC, GPS/geolocation, Bluetooth LE, and multi-user Share rooms — plus mobile gesture locking, browser-permission activation UI, and an on-screen debug console. Current version: **1.15.2**.
+p5-phone is a single-file helper library that gives p5.js sketches access to mobile phone hardware — motion sensors, microphone, sound, speech, camera (with ML5 coordinate mapping), vibration, torch/flashlight, NFC, GPS/geolocation, Bluetooth LE, and multi-user Share rooms — plus mobile gesture locking, browser-permission activation UI, and an on-screen debug console. Current version: **1.16.1**.
 
 It works in **both p5.js 1.x and 2.x** (auto-detected at runtime). Every public function is attached to `window` (global mode) and mirrored on `p5.prototype` (instance mode), so you call them as bare globals like `lockGestures()` and `enableGyroTap()`.
 
@@ -34,7 +34,7 @@ HTML baseline (p5.js 2-compatible):
   </style>
   <script src="https://cdn.jsdelivr.net/npm/p5@2.2.3/lib/p5.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/p5.js-compatibility@0.2.0/src/preload.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/p5-phone@1.15.3/dist/p5-phone.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/p5-phone@1.16.1/dist/p5-phone.min.js"></script>
 </head>
 <body>
   <script src="sketch.js"></script>
@@ -83,9 +83,9 @@ function mousePressed() {
 3. **Gate all hardware reads behind the matching `window.*Enabled` flag** (`sensorsEnabled`, `micEnabled`, `bleConnected`, etc.). Reading before permission returns stale/undefined data. Write the gate as a positive `if (window.sensorsEnabled) { … }` around the code that reads the hardware, not a flipped early return (`if (!window.sensorsEnabled) return;`).
 4. **Use `mousePressed` / `mouseDragged` / `mouseReleased`, not p5 1.x `touchStarted` / `touchMoved` / `touchEnded`.** The mouse callbacks fire for both mouse and touch in p5.js 1.x and 2.x; the touch callbacks are removed/no-ops in p5.js 2.
 5. **Serve over HTTPS** (or `localhost`). Sensors, mic, camera, NFC, BLE, GPS, and torch all require a secure context on mobile.
-6. **Need several hardware features from one tap? Use a single combined call** — `enablePermissionsTap(['sensors', 'torch'])` — not several single-permission binds on the same gesture. One call keeps iOS transient activation intact and fires `userSetupComplete()` once.
+6. **Need several hardware features from one tap? Use a single combined call** — `enablePermissionsTap(['gyro', 'torch'])` — not several single-permission binds on the same gesture. One call keeps iOS transient activation intact and fires `userSetupComplete()` once.
 7. **Use exactly one activation style per permission need** unless the user explicitly asks to compare styles.
-8. **One `enable*` call at a time.** Each `enable*` call removes the button, overlay or banner of any earlier one, so `enableGyroTap()` followed by `enableBleButton()` leaves only the BLE button and motion never starts. Combine permissions in one `enablePermissions*` call. BLE and Share are not tokens there: start them from `userSetupComplete()` (see [Combining features](#combining-features)).
+8. **One `enable*` call at a time.** Each `enable*` call removes the button, overlay or banner of any earlier one, so `enableGyroTap()` followed by `enableBleButton()` leaves only the BLE button and motion never starts. Combine permissions in one `enablePermissions*` call; Share can go in it as `'share'`. BLE is not a name there: start it from `userSetupComplete()` (see [Combining features](#combining-features)).
 
 ## Use p5.js built-ins — do not reimplement them
 
@@ -98,7 +98,7 @@ The most common failure mode is a model **hand-rolling hardware plumbing** (a ra
 | How fast it is turning | `rotationX - pRotationX` (and Y, Z) each frame, or `deviceTurned()` with `turnAxis` | p5.js has **no** rotation-rate globals (see the trap below) |
 | Motion events / thresholds | `deviceMoved()`, `deviceShaken()`, `setMoveThreshold()`, `setShakeThreshold()`, `deviceOrientation` | define the callbacks as globals |
 | Touch / pointer input | `mousePressed()`, `mouseDragged()`, `mouseReleased()`, `mouseX`, `mouseY`, `touches[]` | p5.js 2 unifies mouse+touch under the pointer model; use `touches[]` for multitouch, and `touches.length > 0` for "a finger is down" (`mouseIsPressed` turns false when any one finger lifts). Do **not** add your own `addEventListener('touchstart', …)` |
-| Drawing the camera feed | `image(cam, x, y, w, h)` + `cam.mapKeypoint()/mapBox()` | `PhoneCamera` integrates with p5's `image()`; map ML5 results with its helpers, not manual video compositing |
+| Drawing the camera feed | `image(cam, x, y, w, h)` + `cam.mapKeypoint()/mapBox()` | `PhoneCamera` integrates with p5's `image()`; map ML5 results with its helpers, not manual video compositing. Under the unminified p5.js 2.2.3+, p5-phone 1.15.4 and earlier log a harmless "Expected Image or Element" warning each frame; the camera still draws |
 | Microphone level / analysis | `p5.AudioIn`, `p5.Amplitude`, `p5.FFT` (p5.sound) | not a raw Web Audio graph |
 | Generated sound | `p5.Oscillator`, `p5.Envelope` (p5.sound) | prefer over `loadSound()` for portability |
 | Loading images/audio/JSON/font | `await loadImage()/loadSound()/loadJSON()/loadFont()` in `async setup()` | p5.js 2: `load*` return Promises — no `preload()`. See the `p5js-2x` skill |
@@ -151,15 +151,15 @@ Notes:
 
 `enablePermissions*` (a.k.a. `enableHardware*`) takes a list plus a message. The list can be an array or a space/comma string.
 
-**Canonical tokens:** `sensors`, `mic`, `sound`, `speech`, `vibration`, `torch`, `nfc`, `geo`, `camera`.
+**Names for the list:** `gyro` (motion and orientation, like `enableGyroTap()`; it sets `window.sensorsEnabled`), `mic`, `sound`, `speech`, `vibration`, `torch`, `nfc`, `geo`, `camera`, `share` (joins the room from `shareSetup()` and keeps the screen on; call `shareSetup()` in `setup()` first). Write `gyro` for motion in generated code, not the more generic `sensors`.
 
-**Aliases** (all normalized to the canonical tokens): `sensor`, `motion`, `orientation`, `gyro`, `gyroscope`, `accelerometer` → `sensors`; `microphone`, `audioin` → `mic`; `audio`, `audiooutput`, `output` → `sound`; `voice`, `recognition` → `speech`; `vibrate`, `haptic`, `haptics` → `vibration`; `flashlight`, `flash`, `light` → `torch`; `tag`, `tags` → `nfc`; `gps`, `location`, `geolocation` → `geo`; `video`, `webcam` → `camera`; `all` → `sensors` + `mic`.
+**Other names that work** (each means the same as one above): `motion`, `sensors`, `sensor`, `orientation`, `gyroscope`, `accelerometer` → `gyro`; `microphone`, `audioin` → `mic`; `audio`, `audiooutput`, `output` → `sound`; `voice`, `recognition` → `speech`; `vibrate`, `haptic`, `haptics` → `vibration`; `flashlight`, `flash`, `light` → `torch`; `tag`, `tags` → `nfc`; `gps`, `location`, `geolocation` → `geo`; `video`, `webcam` → `camera`; `room`, `rooms` → `share`; `all` → `gyro` + `mic`.
 
 ```javascript
 function setup() {
   createCanvas(windowWidth, windowHeight);
   lockGestures();
-  enablePermissionsTap(['sensors', 'mic'], 'Tap to enable motion + microphone');
+  enablePermissionsTap(['gyro', 'mic'], 'Tap to enable motion + microphone');
 }
 
 function draw() {
@@ -169,7 +169,7 @@ function draw() {
 }
 ```
 
-**BLE or Share as well.** `ble` and `share` are not tokens, and a second `enable*` call in `setup()` would remove the first one's UI. Start them once the first tap has worked:
+**BLE as well.** `ble` is not a name for the list, and a second `enable*` call in `setup()` would remove the first one's UI. Start it once the first tap has worked:
 
 ```javascript
 function setup() {
@@ -185,7 +185,7 @@ function userSetupComplete() {
 }
 ```
 
-For Share, call `shareSetup()` in `setup()` and `shareConnect()` in `userSetupComplete()`. Share needs no second tap.
+Share is in the list: call `shareSetup()` in `setup()`, then `enablePermissionsTap(['gyro', 'share'], 'Tap to join')`. The tap joins the room and keeps the screen on; `userSetupComplete()` runs without waiting for the room, so read `window.shareConnected` (or use `shareReady()`) before relying on `shared`.
 
 ## Status variables and callbacks
 
@@ -200,8 +200,9 @@ Read these `window.*` flags before using hardware data:
 - **NFC:** `nfcEnabled`, `nfcStatus`, `nfcError`, `nfcTagAliases`, `lastNfcSerialNumber`, `lastNfcAlias`, `lastNfcMessage`
 - **GPS:** `geoEnabled`, `geoStatus`, `geoError`, `lastGeoPosition`
 - **BLE:** `bleSupported`, `bleConnected`, `bleStatus`, `bleError`, `bleDeviceName`, `bleValues`
-- **Share:** `shareSupported`, `shareConnected`, `shareStatus`, `shareError`, `shareRoom`, `shareClientId`, `shareIsHost`, `shared`, `me`, `guests`
+- **Share:** `shareSupported`, `shareConnected`, `shareStatus`, `shareError`, `shareRoom`, `shareClientId`, `shareIsHost`, `shareKept`, `shareKeptUntil`, `shareQuiet`, `shared`, `me`, `guests`
 - **Camera:** `cameraEnabled`
+- **Wake lock:** `screenAwake` (set by `keepScreenOn()` and by joining a Share room)
 - **Gestures:** `gesturesLocked`
 - **Device:** `isMobile`, `isDesktop` (best-effort detection, set when the library loads)
 
@@ -215,7 +216,7 @@ Callbacks your sketch can define (p5-phone calls them if present):
 - `bleReceive(name, value)` — a BLE characteristic notified or was read.
 - `shareReady()` — Share room welcome applied.
 - `shareReceive(path, value)` — remote Share patch applied.
-- `shareClosed()` / `shareHostChanged(isHost)` / `shareEvent(name, data)` — Share lifecycle and emits.
+- `shareClosed()` / `shareHostChanged(isHost)` / `shareEvent(name, data, from)` — Share lifecycle and emits (`from` is the sender's id, matching `guests[i].id`). `shareJoined(id, data)` / `shareLeft(id, data)` — another phone joined after you, or left (with its last `me`).
 
 ```javascript
 function userSetupComplete() {
@@ -370,7 +371,7 @@ function draw() {
 }
 ```
 
-Helpers: `setNfcTagAlias(serialNumber, alias)`, `getNfcTagAlias(serialNumber?)` (defaults to `window.lastNfcSerialNumber`), `isNfcTag(aliasOrSerialNumber)`, `stopNfc()`. Track state via `window.nfcStatus` (`idle`/`starting`/`requesting-permission`/`scanning`/`tag-read`/`permission-denied`/`unsupported`/`secure-context-required`/`error`/`stopped`) and `window.nfcError`.
+Helpers: `setNfcTagAlias(serialNumber, alias)`, `getNfcTagAlias(serialNumber?)` (defaults to `window.lastNfcSerialNumber`), `isNfcTag(aliasOrSerialNumber)`, `stopNfc()`. Track state via `window.nfcStatus` (`idle`/`starting`/`requesting-permission`/`scanning`/`tag-read`/`permission-denied`/`unsupported`/`secure-context-required`/`error`/`stopped`) and `window.nfcError`. Inside an iframe (the p5.js Web Editor) Web NFC cannot run: the status is `unsupported` and `nfcError` says to open the sketch on its own page.
 
 ## GPS / geolocation
 
@@ -498,7 +499,7 @@ function setup() {
 }
 ```
 
-Functions: `shareSetup(config)`, `enableShare*` (or `shareConnect()` from a gesture), `shareDisconnect()`, `shareSet(path, v)` / `shareSetMe(path, v)`, `shareEmit(name, data?)` (one-shot room event, received in `shareEvent(name, data)`, not stored, not echoed to the sender), `getShareJoinUrl()`, `isShareSupported()`.
+Functions: `shareSetup(config)`, `enableShare*` (or `shareConnect()` from a gesture), `shareDisconnect()`, `shareSet(path, v)` / `shareSetMe(path, v)`, `shareEmit(name, data?)` (one-shot room event, received in `shareEvent(name, data, from)` with the sender's id, not stored, not echoed to the sender), `shareClear()` (reset `shared` to its `shareSetup` value for everyone), `getShareJoinUrl()`, `isShareSupported()`, `shareGuest(id)` (that guest's `me`, or your own `me`, or `null`), `guestsWith(field, value?)` (filter guests: has the field, or has that value), `shareStatusText()` (one sentence about the connection), `keepScreenOn()` (wake lock; joining calls it). Joining from the same tap as other permissions: `enablePermissionsTap(['gyro', 'share'])` after `shareSetup()`.
 
 Join URL shape: `?shareHost=https://….workers.dev&room=my-game&app=final-project`  
 Helpers: `getShareJoinUrl()`, `showDesktopQr({ share: false })` to opt out.  
@@ -513,6 +514,9 @@ Rules:
 - `guests` is read-mostly (other players' `me` snapshots); mutating it does not sync.
 - `shareIsHost` is true for the first client to join; when the host leaves, the lexicographically first remaining client takes over.
 - After updating p5-phone, redeploy the worker (`npx wrangler deploy`): 1.14.0 speaks protocol v2, and a mismatch shows as `shareError` "Unsupported protocol version".
+- **Keep (the room between visits).** `shareSetup({ ..., keep: '7d' })` keeps `shared` after the last phone leaves. `keep` is `true` (7 days), ms, `'30m'` / `'24h'` / `'7d'`, or `{ expire: '24h' }`; the most is 30 days. The copy is deleted `expire` after the last *change* (a visit does not extend it). The first phone to create the room sets the rule; read the result in `shareKept` (bool) and `shareKeptUntil` (ms timestamp or 0). Only `shared` is kept, never `me` or `guests`. A kept room holds at most 64 KB of `shared`; a bigger write is refused and sets `shareError` ("Not saved …"). `shareClear()` resets `shared` to the `shareSetup` value for everyone and erases the kept copy (any phone can call it, so give the button to one person). The worker must be redeployed to keep rooms: an older worker ignores `keep` (`shareKept` stays `false`) and answers `shareClear()` with a `shareError`.
+- **Quiet (a page that does not read other phones' values).** The worker sends every phone's `me` changes to every other phone, so a room of n phones costs n×n messages (30 phones at 10 Hz is about 8,700 a second; a small board manages 6 to 8 phones). `shareSetup({ ..., quiet: true })` tells the worker not to send this phone those changes. Use it on a page that reads only `shared` (a class-wide phone page reading `shared.average`, a board). Do not use it on the page that needs everyone's `me` (the projector). Each page chooses for itself. A quiet page still sends its own `me` and still gets `shared`, `shareEvent`, joins and leaves, `shareClear()` and the keep messages. **With `quiet`, `guests` tells you who is here and their `role` and `name`, but not their live values:** each entry is a snapshot of that phone's `me`, taken when you join and again when anyone joins or leaves, so put `role` and `name` in the `me` you pass to `shareSetup()`. `shareQuiet` is `true` once the worker has agreed. An older worker ignores `quiet` (`shareQuiet` stays `false`, the console says so, and everything arrives as before), so redeploy the worker (`npx wrangler deploy`) to use it.
+- **Many phones adding to one kept room.** Last write wins, so `shared.marks.push(x)` from five phones at once loses marks. Give each addition its own key: `shared['m-' + shareClientId.slice(0, 8) + '-' + n++] = { x, y, t: Date.now() }`. Deleting the same old key from two phones is safe.
 - Wire protocol: see `companion/P5PhoneShare/PROTOCOL.md`.
 - Roadmap: localStorage host memory, short room codes, one-click deploy, adapters.
 
@@ -543,7 +547,7 @@ Works on iPhone (iOS 17.4 or later) and Android Chrome. Requires HTTPS and works
 function setup() {
   createCanvas(windowWidth, windowHeight);
   lockGestures();
-  enablePermissionsTap(['sensors', 'torch'], 'Tap to enable shake flashlight');
+  enablePermissionsTap(['gyro', 'torch'], 'Tap to enable shake flashlight');
 }
 
 async function deviceShaken() {
@@ -557,48 +561,35 @@ Keep flashing pulses slow and short, avoid rapid strobing, and call `torchOff()`
 
 ## Screen Wake Lock (keep the screen on)
 
-Only touches reset the phone's auto-lock timer, so a sketch driven by motion, sound, GPS, or BLE goes dark after about 30 seconds. Keep the screen on with the browser's own Screen Wake Lock API. **It is not a p5-phone feature:** there is no `keepScreenOn()`, no `enableWakeLock*()`, and no `wakelock` token for `enablePermissions*`. Do not invent them; call `navigator.wakeLock` directly.
+Only touches reset the phone's auto-lock timer, so a sketch driven by motion, sound, GPS, or BLE goes dark after about 30 seconds. From p5-phone 1.16.0, call `keepScreenOn()` from a tap. It wraps the browser's Screen Wake Lock API and asks for the lock again each time the page comes back. Joining a Share room calls it for you (`shareSetup({ keepScreenOn: false })` turns that off). There is no `enableWakeLock*()` and no `wakelock` name for `enablePermissions*`; do not invent them.
 
 ```javascript
-let wakeLock = null;
-let wantAwake = false;
-
 function setup() {
   createCanvas(windowWidth, windowHeight);
   lockGestures();
-  // The browser drops the lock while the page is hidden. Ask again when it's back.
-  document.addEventListener('visibilitychange', () => {
-    if (wantAwake && document.visibilityState === 'visible') requestWakeLock();
-  });
-}
-
-async function requestWakeLock() {
-  try {
-    wakeLock = await navigator.wakeLock.request('screen');
-  } catch (err) {
-    debugWarn('Wake lock refused: ' + err.message); // power saving, low battery, blocked iframe
-  }
 }
 
 function mouseReleased() {
-  const awake = wakeLock !== null && !wakeLock.released;
-  if ('wakeLock' in navigator && !awake) {
-    wantAwake = true;
-    requestWakeLock();
-  }
+  keepScreenOn(!window.screenAwake); // each tap turns it on or off
   return false;
+}
+
+function draw() {
+  background(window.screenAwake ? 'gold' : 20);
 }
 ```
 
-- **Request from `mouseReleased()`.** iOS Safari refuses the first request without a user gesture, and a touch only counts as one when the finger lifts, so `mousePressed()` is too early. `userSetupComplete()` is too late: it runs after the permission prompts, when iOS may no longer count the tap. Chrome needs no gesture.
-- **Request again on `visibilitychange`.** The lock is released whenever the page is hidden (another app, another tab, the side button) and never comes back by itself. On iOS, only the first request needs a tap.
-- Wrap `request()` in `try`/`catch`: power saving and low battery can refuse or drop the lock. Check `wakeLock.released` (or listen for the sentinel's `release` event) rather than assuming the lock is still held.
-- HTTPS or `localhost` only; `'wakeLock' in navigator` is `false` otherwise.
-- It fails in the p5.js Web Editor with `NotAllowedError`, because the preview iframe lacks `allow="screen-wake-lock"`. Host the sketch on its own page (GitHub Pages works).
+- `keepScreenOn()` returns a `Promise<boolean>` (`true` if the screen is being kept on); `keepScreenOn(false)` lets the screen sleep. `window.screenAwake` is `true` while the lock is held.
+- **Call it from `mouseReleased()`.** iOS Safari refuses the first request without a user gesture, and a touch only counts as one when the finger lifts, so `mousePressed()` is too early. `userSetupComplete()` is too late: it runs after the permission prompts, when iOS may no longer count the tap. Chrome needs no gesture.
+- The browser releases the lock whenever the page is hidden (another app, another tab, the side button); after `keepScreenOn()`, p5-phone asks again when the page is visible. On iOS, only the first request needs a tap.
+- A refusal (power saving, low battery, a blocked iframe) resolves `false` and leaves `screenAwake` `false`; it does not throw.
+- HTTPS or `localhost` only.
+- It is refused in the p5.js Web Editor, because the preview iframe lacks `allow="screen-wake-lock"`. Host the sketch on its own page (GitHub Pages works).
 - It only keeps the screen on. It can't change the phone's auto-lock setting or brightness, turn on a screen that is off, or keep the sketch running in the background.
 - Support: Chrome and Edge, Safari 16.4+ on iOS (Home Screen web apps from 18.4), Firefox 126+.
+- For p5-phone 1.15.4 or earlier, call the browser API directly: `wakeLock = await navigator.wakeLock.request('screen')` in a `try`/`catch` from `mouseReleased()`, and ask again on `visibilitychange` when the page is visible.
 
-Example: `examples/Phone Sensor Examples/wakelock/01_keep_screen_on/`.
+Example: `examples/Phone Sensor Examples/wakelock/01_keep_screen_on/` (it calls `navigator.wakeLock` directly, so it also runs on 1.15.4).
 
 ## lockGestures reference
 
@@ -614,7 +605,16 @@ lockGestures(options?)
 
 Use bare `lockGestures()` for full-screen mobile sketches. Use `lockGestures({ mode: 'embedded', element: canvas })` for a canvas embedded in a scrollable, multi-section page — it scopes gesture blocking to that canvas so the rest of the page still scrolls. `unlockGestures()` restores the saved handlers, listeners, and styles. `window.gesturesLocked` reflects the current state.
 
-Caveat: p5 touch/mouse callbacks are snapshotted when gestures lock. If you assign `window.mousePressed = ...` *after* `lockGestures()`, you replace p5-phone's wrapper. Define your callbacks before locking, or reassign is fine as long as you `return false` from them.
+Form controls and buttons work under either mode: `createInput()`, `createSelect()`, `createCheckbox()`, `createSlider()`, textareas, `contenteditable` elements and labels take taps, clicks, focus and typing, and a `createButton()` gets every tap, quick repeated taps included. The sketch's own `mousePressed()` can keep `return false`. So a sketch with a text field or a button still calls plain `lockGestures()`; it does not need embedded mode for that. Up to p5-phone 1.15.4, `lockGestures()` cancelled presses on form controls in both modes and a text field never took focus. Up to 1.16.0, under p5.js 1.x a tap on a `createButton()` did nothing (under 2.x quick taps counted only every second one). In a sketch pinned to an older version, keep each field's or button's presses away from p5:
+
+```javascript
+// fields: p5-phone 1.15.4 and earlier; buttons: 1.16.0 and earlier
+for (const type of ['pointerdown', 'mousedown', 'touchstart', 'touchend']) {
+  field.elt.addEventListener(type, (e) => e.stopPropagation());
+}
+```
+
+Caveat: p5 touch/mouse callbacks are snapshotted when gestures lock. If you assign `window.mousePressed = ...` *after* `lockGestures()`, you replace p5-phone's wrapper. Define your callbacks before locking, or reassign is fine as long as you `return false` from them. A reassigned handler that returns `false` cancels presses on text fields too, so they never take focus.
 
 ## Debug console
 
@@ -663,7 +663,8 @@ All hardware requires a secure context (HTTPS or localhost).
 ## Troubleshooting
 
 - **Permission never fires / `*Enabled` stays false** — the request must run inside a user gesture. Confirm you used an `enable*` activation UI and did not call it on load. On iOS a single gesture only grants one activation window, so combine features with one `enablePermissions*` call.
-- **Motion works on GitHub Pages but not in the p5.js Web Editor on Android** — since Chrome 153, Chrome pauses motion in an iframe until the sketch has focus. p5-phone 1.15.3+ gives it focus on the motion tap (and, with `lockGestures()`, on any later tap on the sketch). Load `p5-phone@1.15.3` or later and start every motion sketch with a p5-phone tap, even though Android shows no prompt.
+- **Motion works on GitHub Pages but not in the p5.js Web Editor on Android** — since Chrome 153, Chrome pauses motion in an iframe until the sketch has focus. p5-phone 1.15.3 gives it focus on the motion tap; 1.15.4+ on any p5-phone tap and any later tap or click on the sketch. Load `p5-phone@1.15.4` or later and start every motion sketch with a p5-phone tap, even though Android shows no prompt.
+- **In the p5.js Web Editor (an iframe)** — motion, mic, sound, speech, camera, torch, GPS, Bluetooth, Share and vibration work after the p5-phone tap. `keyPressed()` works after a tap or click on the sketch (with `lockGestures()`, p5-phone 1.15.4+). NFC and the screen wake lock never work there: host those sketches on their own page (GitHub Pages).
 - **ML5 throws about `_incrementPreload` / preload with p5.js 2** — add the preload-counter polyfill shim before loading ml5 (see Camera section).
 - **ML5: `Cannot read properties of null (reading 'estimateHands')`** — `detectStart()` ran before the model loaded. In a p5 sketch, call it in ml5's ready callback, not after `await` (see Camera section).
 - **Motion (or the mic) never starts after adding a BLE or Share button** — a second `enable*` call removed the first one's UI. Start BLE and Share from `userSetupComplete()` (see Combining features).
